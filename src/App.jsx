@@ -593,6 +593,15 @@ export default function MyWheatApp() {
     }
   }, []);
 
+  const [resettingProducts, setResettingProducts] = useState(false);
+  const resetProductsToDefaults = useCallback(async () => {
+    if (!window.confirm("هذا سيستبدل كل بيانات وصور المنتجات المحفوظة بأحدث نسخة من الكود. متابعة؟")) return;
+    setResettingProducts(true);
+    await saveProducts(DEFAULT_PRODUCTS);
+    setResettingProducts(false);
+    window.alert("تم تحديث المنتجات لأحدث نسخة.");
+  }, [saveProducts]);
+
   const loadOrders = useCallback(async () => {
     setLoadingOrders(true);
     try {
@@ -1080,6 +1089,26 @@ export default function MyWheatApp() {
           <p style={{ color: BRAND.brownSoft }} className="text-xs mb-6">
             ملاحظة: هذه اللوحة غير محمية بكلمة مرور — أي شخص لديه رابط التطبيق يمكنه الوصول إليها.
           </p>
+
+          <div
+            style={{ backgroundColor: "#FFF6E5", borderColor: BRAND.gold }}
+            className="border rounded-xl p-4 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+          >
+            <div className="text-sm" style={{ color: BRAND.brown }}>
+              <div className="font-bold mb-1">تحديث المنتجات (أسعار / صور / أسماء) بعد رفع الكود</div>
+              <div style={{ color: BRAND.brownSoft }}>
+                التطبيق يحفظ نسخة من بيانات المنتجات، ولا يقرأها من الكود تلقائيًا بعد أول تشغيل. اضغط هذا الزر بعد كل رفع لملف الكود على GitHub حتى تظهر التعديلات (أسعار، صور، أسماء) على المتجر فعليًا.
+              </div>
+            </div>
+            <button
+              onClick={resetProductsToDefaults}
+              disabled={resettingProducts}
+              style={{ backgroundColor: BRAND.rust }}
+              className="text-white text-sm font-bold px-4 py-2.5 rounded-full whitespace-nowrap disabled:opacity-60"
+            >
+              {resettingProducts ? "جاري التحديث..." : "تحديث المنتجات الآن"}
+            </button>
+          </div>
 
           <section className="mb-10">
             <h3 style={{ color: BRAND.brown }} className="font-bold mb-3">
