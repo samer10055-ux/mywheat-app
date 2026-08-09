@@ -558,7 +558,7 @@ function cartKey(productId, sizeLabel) {
 }
 
 const SUPABASE_URL = "https://vmpsaefolgxmyqyemkgj.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_iFp2UVemNLqvHJelV9XQfQ__qObeeFu";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZtcHNhZWZvbGd4bXlxeWVta2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyNTkwMTUsImV4cCI6MjEwMTgzNTAxNX0.RhkE9Tr_Q22uwfZperW0jpaO-p8D3vRapEjZ-_vg8ys";
 
 async function supaAuthLogin(email, password) {
   const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
