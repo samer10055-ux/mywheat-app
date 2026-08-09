@@ -762,7 +762,13 @@ export default function MyWheatApp() {
       headers: supaHeaders(null, { "Content-Type": blob.type || "image/jpeg", "x-upsert": "true" }),
       body: blob,
     });
-    if (!res.ok) throw new Error(`upload failed: ${path} (${res.status})`);
+    if (!res.ok) {
+      let detail = "";
+      try {
+        detail = await res.text();
+      } catch (_) {}
+      throw new Error(`upload failed: ${path} (${res.status}) ${detail}`);
+    }
     return `${SUPABASE_URL}/storage/v1/object/public/product-images/${path}`;
   }
 
@@ -771,6 +777,7 @@ export default function MyWheatApp() {
     setMigrating(true);
     setMigrateResultJson("");
     const mapping = {};
+    const errors = [];
     let done = 0;
     let total = 0;
 
@@ -781,55 +788,51 @@ export default function MyWheatApp() {
       for (const s in sizes) if (sizes[s]) total++;
     }
 
-    try {
-      for (const id in PRODUCT_IMAGES) {
-        const val = PRODUCT_IMAGES[id];
-        if (!val) continue;
-        setMigrateProgress(`${done + 1}/${total} — ${id}`);
-        const blob = await dataUrlToBlob(val);
-        const url = await uploadToStorage(`default__${id}.jpg`, blob);
-        mapping[`default__${id}`] = url;
-        done++;
-      }
-      for (const id in PRODUCT_EXTRA_IMAGES) {
-        const arr = PRODUCT_EXTRA_IMAGES[id] || [];
-        for (let i = 0; i < arr.length; i++) {
-          setMigrateProgress(`${done + 1}/${total} — ${id} (extra ${i})`);
-          const blob = await dataUrlToBlob(arr[i]);
-          const url = await uploadToStorage(`extra__${id}__${i}.jpg`, blob);
-          mapping[`extra__${id}__${i}`] = url;
-          done++;
-        }
-      }
-      for (const id in PRODUCT_SIZE_IMAGES) {
-        const sizes = PRODUCT_SIZE_IMAGES[id] || {};
-        for (const s in sizes) {
-          if (!sizes[s]) continue;
-          setMigrateProgress(`${done + 1}/${total} — ${id} (${s})`);
-          const blob = await dataUrlToBlob(sizes[s]);
-          const safeSize = s.replace(/[^a-zA-Z0-9]/g, "_");
-          const url = await uploadToStorage(`size__${id}__${safeSize}.jpg`, blob);
-          mapping[`size__${id}__${s}`] = url;
-          done++;
-        }
-      }
-      // logo banner
+    async function tryUpload(key, path, dataUrl) {
+      setMigrateProgress(`${done + 1}/${total} — ${key}`);
       try {
-        const logoImg = document.querySelector('img[alt="ماي ويت"]');
-        if (logoImg && logoImg.src && logoImg.src.startsWith("data:")) {
-          const blob = await dataUrlToBlob(logoImg.src);
-          const url = await uploadToStorage("logo__banner.jpg", blob);
-          mapping["logo__banner"] = url;
-        }
-      } catch (_) {}
-
-      setMigrateResultJson(JSON.stringify(mapping, null, 2));
-      setMigrateProgress(`تم! رفعت ${done}/${total} صورة.`);
-    } catch (e) {
-      setMigrateProgress(`صار خطأ: ${e.message}`);
-    } finally {
-      setMigrating(false);
+        const blob = await dataUrlToBlob(dataUrl);
+        const url = await uploadToStorage(path, blob);
+        mapping[key] = url;
+      } catch (e) {
+        errors.push(`${key}: ${e.message}`);
+      }
+      done++;
     }
+
+    for (const id in PRODUCT_IMAGES) {
+      const val = PRODUCT_IMAGES[id];
+      if (!val) continue;
+      await tryUpload(`default__${id}`, `default__${id}.jpg`, val);
+    }
+    for (const id in PRODUCT_EXTRA_IMAGES) {
+      const arr = PRODUCT_EXTRA_IMAGES[id] || [];
+      for (let i = 0; i < arr.length; i++) {
+        await tryUpload(`extra__${id}__${i}`, `extra__${id}__${i}.jpg`, arr[i]);
+      }
+    }
+    for (const id in PRODUCT_SIZE_IMAGES) {
+      const sizes = PRODUCT_SIZE_IMAGES[id] || {};
+      for (const s in sizes) {
+        if (!sizes[s]) continue;
+        const safeSize = s.replace(/[^a-zA-Z0-9]/g, "_");
+        await tryUpload(`size__${id}__${s}`, `size__${id}__${safeSize}.jpg`, sizes[s]);
+      }
+    }
+    // logo banner
+    try {
+      const logoImg = document.querySelector('img[alt="ماي ويت"]');
+      if (logoImg && logoImg.src && logoImg.src.startsWith("data:")) {
+        await tryUpload("logo__banner", "logo__banner.jpg", logoImg.src);
+      }
+    } catch (_) {}
+
+    const okCount = Object.keys(mapping).length;
+    setMigrateResultJson(
+      JSON.stringify({ mapping, errors: errors.slice(0, 5), errorCount: errors.length }, null, 2)
+    );
+    setMigrateProgress(`تم! نجح ${okCount}/${total}، فشل ${errors.length}.`);
+    setMigrating(false);
   }
 
   function downloadMigrationJson() {
