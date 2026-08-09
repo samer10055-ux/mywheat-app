@@ -648,6 +648,8 @@ export default function MyWheatApp() {
   const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "" });
   const [placing, setPlacing] = useState(false);
   const [lastOrderId, setLastOrderId] = useState(null);
+  const [lastOrderItems, setLastOrderItems] = useState([]);
+  const [lastOrderTotal, setLastOrderTotal] = useState(0);
   const [trackOrderId, setTrackOrderId] = useState("");
   const [trackPhone, setTrackPhone] = useState("");
   const [trackResult, setTrackResult] = useState(null);
@@ -954,6 +956,8 @@ export default function MyWheatApp() {
     const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${message}`;
 
     setLastOrderId(id);
+    setLastOrderItems(cartItems);
+    setLastOrderTotal(cartTotal);
     window.open(waUrl, "_blank");
     setCart({});
     setView("confirmed");
@@ -1287,8 +1291,16 @@ export default function MyWheatApp() {
 
             <div className="flex-1 p-4 space-y-3">
               {cartItems.length === 0 ? (
-                <div style={{ color: BRAND.brownSoft }} className="text-center py-16 text-sm">
-                  سلتك فارغة حاليًا
+                <div style={{ color: BRAND.brownSoft }} className="text-center py-16 text-sm flex flex-col items-center gap-3">
+                  <ShoppingCart size={32} />
+                  <span>سلتك فارغة حاليًا</span>
+                  <button
+                    onClick={() => setCartOpen(false)}
+                    style={{ backgroundColor: BRAND.gold, color: BRAND.brown }}
+                    className="text-xs font-bold px-4 py-2 rounded-full"
+                  >
+                    تصفّح المنتجات
+                  </button>
                 </div>
               ) : (
                 cartItems.map((i) => (
@@ -1407,6 +1419,31 @@ export default function MyWheatApp() {
           <p style={{ color: BRAND.brownSoft }} className="text-sm mb-6">
             سيتواصل معك فريق ماي ويت لتأكيد التوصيل.
           </p>
+          {lastOrderItems.length > 0 && (
+            <div
+              style={{ backgroundColor: BRAND.creamCard, borderColor: "rgba(62,42,23,0.15)" }}
+              className="border rounded-2xl p-4 mb-6 text-right"
+            >
+              <div className="space-y-1.5 mb-3">
+                {lastOrderItems.map((it) => (
+                  <div key={it.key} className="flex justify-between text-sm" style={{ color: BRAND.brownSoft }}>
+                    <span>
+                      {it.name} ({it.sizeLabel}) × {it.qty}
+                    </span>
+                    <span>{fmt(it.price * it.qty)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between pt-2 border-t" style={{ borderColor: "rgba(62,42,23,0.15)" }}>
+                <span style={{ color: BRAND.brown }} className="font-bold text-sm">
+                  الإجمالي
+                </span>
+                <span style={{ color: BRAND.rust }} className="font-extrabold text-sm">
+                  {fmt(lastOrderTotal)}
+                </span>
+              </div>
+            </div>
+          )}
           <button onClick={() => setView("shop")} style={{ backgroundColor: BRAND.brown }} className="text-white font-bold px-6 py-3 rounded-xl">
             متابعة التسوّق
           </button>
