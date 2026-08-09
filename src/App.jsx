@@ -747,6 +747,101 @@ export default function MyWheatApp() {
     window.alert("تم تحديث المنتجات لأحدث نسخة.");
   }, [saveProducts]);
 
+  const [migrating, setMigrating] = useState(false);
+  const [migrateProgress, setMigrateProgress] = useState("");
+  const [migrateResultJson, setMigrateResultJson] = useState("");
+
+  async function dataUrlToBlob(dataUrl) {
+    const res = await fetch(dataUrl);
+    return res.blob();
+  }
+
+  async function uploadToStorage(path, blob) {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${path}`, {
+      method: "POST",
+      headers: supaHeaders(null, { "Content-Type": blob.type || "image/jpeg", "x-upsert": "true" }),
+      body: blob,
+    });
+    if (!res.ok) throw new Error(`upload failed: ${path} (${res.status})`);
+    return `${SUPABASE_URL}/storage/v1/object/public/product-images/${path}`;
+  }
+
+  async function migrateImagesToStorage() {
+    if (!window.confirm("رح يبدأ رفع كل صور المنتجات لتخزين خارجي. قد ياخذ عدة دقايق ولازم تخلي الصفحة مفتوحة. متابعة؟")) return;
+    setMigrating(true);
+    setMigrateResultJson("");
+    const mapping = {};
+    let done = 0;
+    let total = 0;
+
+    for (const id in PRODUCT_IMAGES) if (PRODUCT_IMAGES[id]) total++;
+    for (const id in PRODUCT_EXTRA_IMAGES) total += (PRODUCT_EXTRA_IMAGES[id] || []).length;
+    for (const id in PRODUCT_SIZE_IMAGES) {
+      const sizes = PRODUCT_SIZE_IMAGES[id] || {};
+      for (const s in sizes) if (sizes[s]) total++;
+    }
+
+    try {
+      for (const id in PRODUCT_IMAGES) {
+        const val = PRODUCT_IMAGES[id];
+        if (!val) continue;
+        setMigrateProgress(`${done + 1}/${total} — ${id}`);
+        const blob = await dataUrlToBlob(val);
+        const url = await uploadToStorage(`default__${id}.jpg`, blob);
+        mapping[`default__${id}`] = url;
+        done++;
+      }
+      for (const id in PRODUCT_EXTRA_IMAGES) {
+        const arr = PRODUCT_EXTRA_IMAGES[id] || [];
+        for (let i = 0; i < arr.length; i++) {
+          setMigrateProgress(`${done + 1}/${total} — ${id} (extra ${i})`);
+          const blob = await dataUrlToBlob(arr[i]);
+          const url = await uploadToStorage(`extra__${id}__${i}.jpg`, blob);
+          mapping[`extra__${id}__${i}`] = url;
+          done++;
+        }
+      }
+      for (const id in PRODUCT_SIZE_IMAGES) {
+        const sizes = PRODUCT_SIZE_IMAGES[id] || {};
+        for (const s in sizes) {
+          if (!sizes[s]) continue;
+          setMigrateProgress(`${done + 1}/${total} — ${id} (${s})`);
+          const blob = await dataUrlToBlob(sizes[s]);
+          const safeSize = s.replace(/[^a-zA-Z0-9]/g, "_");
+          const url = await uploadToStorage(`size__${id}__${safeSize}.jpg`, blob);
+          mapping[`size__${id}__${s}`] = url;
+          done++;
+        }
+      }
+      // logo banner
+      try {
+        const logoImg = document.querySelector('img[alt="ماي ويت"]');
+        if (logoImg && logoImg.src && logoImg.src.startsWith("data:")) {
+          const blob = await dataUrlToBlob(logoImg.src);
+          const url = await uploadToStorage("logo__banner.jpg", blob);
+          mapping["logo__banner"] = url;
+        }
+      } catch (_) {}
+
+      setMigrateResultJson(JSON.stringify(mapping, null, 2));
+      setMigrateProgress(`تم! رفعت ${done}/${total} صورة.`);
+    } catch (e) {
+      setMigrateProgress(`صار خطأ: ${e.message}`);
+    } finally {
+      setMigrating(false);
+    }
+  }
+
+  function downloadMigrationJson() {
+    const blob = new Blob([migrateResultJson], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "image-migration-map.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const loadOrders = useCallback(async () => {
     setLoadingOrders(true);
     try {
@@ -1481,6 +1576,62 @@ export default function MyWheatApp() {
             >
               {resettingProducts ? "جاري التحديث..." : "تحديث المنتجات الآن"}
             </button>
+          </div>
+
+          <div
+            style={{ backgroundColor: "#EAF2E5", borderColor: "#5F6B34" }}
+            className="border rounded-xl p-4 mb-8"
+          >
+            <div className="text-sm mb-3" style={{ color: BRAND.brown }}>
+              <div className="font-bold mb-1">نقل صور المنتجات لتخزين خارجي (مرة وحدة فقط)</div>
+              <div style={{ color: BRAND.brownSoft }}>
+                هذا يرفع كل الصور من الكود لمساحة تخزين منفصلة، بيخفف حجم التطبيق كثير. اضغط الزر وخلي الصفحة مفتوحة لين تخلص، وبعدها انسخ النتيجة وابعتها لـ Claude.
+              </div>
+            </div>
+            <button
+              onClick={migrateImagesToStorage}
+              disabled={migrating}
+              style={{ backgroundColor: "#5F6B34" }}
+              className="text-white text-sm font-bold px-4 py-2.5 rounded-full disabled:opacity-60"
+            >
+              {migrating ? "جاري النقل..." : "ابدأ نقل الصور"}
+            </button>
+            {migrateProgress && (
+              <div className="text-xs font-bold mt-2" style={{ color: BRAND.brown }}>
+                {migrateProgress}
+              </div>
+            )}
+            {migrateResultJson && (
+              <div className="mt-3">
+                <textarea
+                  readOnly
+                  value={migrateResultJson}
+                  rows={6}
+                  className="w-full text-xs font-mono border rounded-lg p-2"
+                  style={{ borderColor: "rgba(62,42,23,0.2)" }}
+                  onClick={(e) => e.target.select()}
+                />
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(migrateResultJson);
+                      window.alert("انتسخت! الصقها لـ Claude بالمحادثة.");
+                    }}
+                    style={{ backgroundColor: BRAND.gold, color: BRAND.brown }}
+                    className="text-xs font-bold px-3 py-2 rounded-full"
+                  >
+                    نسخ النتيجة
+                  </button>
+                  <button
+                    onClick={downloadMigrationJson}
+                    style={{ backgroundColor: BRAND.creamCard, color: BRAND.brown, borderColor: "rgba(62,42,23,0.2)" }}
+                    className="text-xs font-bold px-3 py-2 rounded-full border"
+                  >
+                    تحميل كملف
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <section className="mb-10">
