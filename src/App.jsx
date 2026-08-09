@@ -688,6 +688,7 @@ export default function MyWheatApp() {
   };
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [savingKey, setSavingKey] = useState(null);
 
   // load products from Supabase (public read), seed defaults if empty
@@ -1638,29 +1639,51 @@ export default function MyWheatApp() {
           </div>
 
           <section className="mb-10">
-            <h3 style={{ color: BRAND.brown }} className="font-bold mb-3">
-              الطلبات الواردة
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 style={{ color: BRAND.brown }} className="font-bold">
+                الطلبات الواردة
+              </h3>
+              <select
+                value={orderStatusFilter}
+                onChange={(e) => setOrderStatusFilter(e.target.value)}
+                style={{ borderColor: "rgba(62,42,23,0.2)", color: BRAND.brown }}
+                className="text-xs font-bold rounded-full border px-3 py-1.5 bg-transparent"
+              >
+                <option value="all">كل الطلبات</option>
+                {Object.entries(ORDER_STATUS_LABELS).map(([val, label]) => (
+                  <option key={val} value={val}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
             {loadingOrders ? (
               <div className="flex items-center gap-2 text-sm" style={{ color: BRAND.brownSoft }}>
                 <Loader2 className="animate-spin" size={16} /> جاري التحميل...
               </div>
-            ) : orders.length === 0 ? (
+            ) : orders.filter((o) => orderStatusFilter === "all" || o.status === orderStatusFilter).length === 0 ? (
               <div style={{ color: BRAND.brownSoft }} className="text-sm">
-                لا توجد طلبات بعد.
+                لا توجد طلبات مطابقة.
               </div>
             ) : (
               <div className="space-y-3">
-                {orders.map((o) => (
+                {orders
+                  .filter((o) => orderStatusFilter === "all" || o.status === orderStatusFilter)
+                  .map((o) => (
                   <div key={o.id} style={{ backgroundColor: BRAND.creamCard, borderColor: "rgba(62,42,23,0.1)" }} className="rounded-xl border p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                       <div>
                         <span style={{ color: BRAND.brown }} className="font-bold">
-                          {o.customer}
+                          {o.customer_name}
                         </span>
                         <span style={{ color: BRAND.brownSoft }} className="text-xs mr-2">
                           {o.phone}
                         </span>
+                        {o.created_at && (
+                          <div style={{ color: BRAND.brownSoft }} className="text-[10px] mt-0.5">
+                            {new Date(o.created_at).toLocaleString("ar-SY")}
+                          </div>
+                        )}
                       </div>
                       <select
                         value={o.status}
@@ -1668,10 +1691,11 @@ export default function MyWheatApp() {
                         style={{ borderColor: BRAND.gold, color: BRAND.brown }}
                         className="text-xs font-bold rounded-full border px-3 py-1 bg-transparent"
                       >
-                        <option value="جديد">جديد</option>
-                        <option value="قيد التجهيز">قيد التجهيز</option>
-                        <option value="تم التوصيل">تم التوصيل</option>
-                        <option value="ملغى">ملغى</option>
+                        {Object.entries(ORDER_STATUS_LABELS).map(([val, label]) => (
+                          <option key={val} value={val}>
+                            {label}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     {o.address && (
@@ -1679,16 +1703,11 @@ export default function MyWheatApp() {
                         📍 {o.address}
                       </div>
                     )}
-                    {o.notes && (
-                      <div style={{ color: BRAND.brownSoft }} className="text-xs mb-1">
-                        ملاحظة: {o.notes}
-                      </div>
-                    )}
                     <div className="text-xs mt-2 space-y-0.5">
-                      {o.items.map((it, idx) => (
+                      {(o.items || []).map((it, idx) => (
                         <div key={idx} style={{ color: BRAND.brownSoft }} className="flex justify-between">
                           <span>
-                            {it.name} ({it.size}) × {it.qty}
+                            {it.name} ({it.sizeLabel}) × {it.qty}
                           </span>
                           <span>{fmt(it.price * it.qty)}</span>
                         </div>
