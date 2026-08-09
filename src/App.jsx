@@ -536,24 +536,86 @@ function cartKey(productId, sizeLabel) {
   return `${productId}::${sizeLabel}`;
 }
 
-const ADMIN_PASSWORD = "wheat2026";
+const SUPABASE_URL = "https://vmpsaefolgxmyqyemkgj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_iFp2UVemNLqvHJelV9XQfQ__qObeeFu";
+
+async function supaAuthLogin(email, password) {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) return null;
+  return res.json(); // { access_token, refresh_token, ... }
+}
+
+function supaHeaders(accessToken, extra) {
+  return {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+    ...extra,
+  };
+}
 
 export default function MyWheatApp() {
   useGoogleFonts();
 
   const [view, setView] = useState("shop"); // shop | checkout | confirmed | admin
   const [adminUnlocked, setAdminUnlocked] = useState(false);
+  const [adminToken, setAdminToken] = useState(() => {
+    try {
+      return window.localStorage.getItem("mywheat-admin-token") || null;
+    } catch (_) {
+      return null;
+    }
+  });
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [loggingIn, setLoggingIn] = useState(false);
+
+  useEffect(() => {
+    if (adminToken) setAdminUnlocked(true);
+  }, [adminToken]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("owner") === "1") {
-      const pass = window.prompt("أدخل كلمة مرور لوحة الإدارة:");
-      if (pass === ADMIN_PASSWORD) {
-        setAdminUnlocked(true);
-        setView("admin");
-      }
+      setView("admin");
     }
   }, []);
+
+  async function handleAdminLogin(e) {
+    e.preventDefault();
+    setLoginError("");
+    setLoggingIn(true);
+    try {
+      const result = await supaAuthLogin(loginEmail.trim(), loginPassword);
+      if (result && result.access_token) {
+        setAdminToken(result.access_token);
+        try {
+          window.localStorage.setItem("mywheat-admin-token", result.access_token);
+        } catch (_) {}
+        setAdminUnlocked(true);
+      } else {
+        setLoginError("بيانات الدخول غير صحيحة");
+      }
+    } catch (_) {
+      setLoginError("تعذر الاتصال، حاول مرة أخرى");
+    } finally {
+      setLoggingIn(false);
+    }
+  }
+
+  function handleAdminLogout() {
+    setAdminToken(null);
+    setAdminUnlocked(false);
+    try {
+      window.localStorage.removeItem("mywheat-admin-token");
+    } catch (_) {}
+    setView("shop");
+  }
+
   const [products, setProducts] = useState(DEFAULT_PRODUCTS);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [category, setCategory] = useState("الكل");
@@ -567,21 +629,28 @@ export default function MyWheatApp() {
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [savingKey, setSavingKey] = useState(null);
 
-  // load products from shared storage, seed defaults if empty
+  // load products from Supabase (public read), seed defaults if empty
   useEffect(() => {
     (async () => {
       try {
-        const res = await window.storage.get("mywheat-products-v2", true);
-        if (res && res.value) {
-          setProducts(JSON.parse(res.value));
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.all&select=data`, {
+          headers: supaHeaders(null),
+        });
+        const rows = await res.json();
+        if (Array.isArray(rows) && rows.length > 0 && rows[0].data) {
+          setProducts(rows[0].data);
         } else {
-          await window.storage.set("mywheat-products-v2", JSON.stringify(DEFAULT_PRODUCTS), true);
+          await fetch(`${SUPABASE_URL}/rest/v1/products`, {
+            method: "POST",
+            headers: supaHeaders(adminToken, {
+              "Content-Type": "application/json",
+              Prefer: "resolution=merge-duplicates",
+            }),
+            body: JSON.stringify({ id: "all", data: DEFAULT_PRODUCTS }),
+          });
           setProducts(DEFAULT_PRODUCTS);
         }
       } catch (e) {
-        try {
-          await window.storage.set("mywheat-products-v2", JSON.stringify(DEFAULT_PRODUCTS), true);
-        } catch (_) {}
         setProducts(DEFAULT_PRODUCTS);
       } finally {
         setLoadingProducts(false);
@@ -589,14 +658,24 @@ export default function MyWheatApp() {
     })();
   }, []);
 
-  const saveProducts = useCallback(async (next) => {
-    setProducts(next);
-    try {
-      await window.storage.set("mywheat-products-v2", JSON.stringify(next), true);
-    } catch (e) {
-      console.error("تعذر حفظ المنتجات", e);
-    }
-  }, []);
+  const saveProducts = useCallback(
+    async (next) => {
+      setProducts(next);
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/products`, {
+          method: "POST",
+          headers: supaHeaders(adminToken, {
+            "Content-Type": "application/json",
+            Prefer: "resolution=merge-duplicates",
+          }),
+          body: JSON.stringify({ id: "all", data: next, updated_at: new Date().toISOString() }),
+        });
+      } catch (e) {
+        console.error("تعذر حفظ المنتجات", e);
+      }
+    },
+    [adminToken]
+  );
 
   const [resettingProducts, setResettingProducts] = useState(false);
   const resetProductsToDefaults = useCallback(async () => {
@@ -610,24 +689,18 @@ export default function MyWheatApp() {
   const loadOrders = useCallback(async () => {
     setLoadingOrders(true);
     try {
-      const listRes = await window.storage.list("mywheat-orders:", true);
-      const keys = (listRes && listRes.keys) || [];
-      const results = [];
-      for (const k of keys) {
-        try {
-          const r = await window.storage.get(k, true);
-          if (r && r.value) results.push(JSON.parse(r.value));
-        } catch (_) {}
-      }
-      results.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      setOrders(results);
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?select=*&order=created_at.desc`, {
+        headers: supaHeaders(adminToken),
+      });
+      const rows = await res.json();
+      setOrders(Array.isArray(rows) ? rows : []);
     } catch (e) {
       console.error("تعذر تحميل الطلبات", e);
       setOrders([]);
     } finally {
       setLoadingOrders(false);
     }
-  }, []);
+  }, [adminToken]);
 
   useEffect(() => {
     if (view === "admin") loadOrders();
@@ -679,6 +752,24 @@ export default function MyWheatApp() {
     setPlacing(true);
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+        method: "POST",
+        headers: supaHeaders(null, { "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          id,
+          customer_name: form.name.trim(),
+          phone: form.phone.trim(),
+          address: form.address.trim() || null,
+          items: cartItems,
+          total: cartTotal,
+          status: "pending",
+        }),
+      });
+    } catch (e) {
+      console.error("تعذر حفظ الطلب", e);
+    }
+
     const lines = [];
     lines.push("طلب جديد من ماي ويت");
     lines.push(`رقم الطلب: ${id}`);
@@ -706,10 +797,13 @@ export default function MyWheatApp() {
   }
 
   async function updateOrderStatus(order, status) {
-    const next = { ...order, status };
     try {
-      await window.storage.set(`mywheat-orders:${order.id}`, JSON.stringify(next), true);
-      setOrders((prev) => prev.map((o) => (o.id === order.id ? next : o)));
+      await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${order.id}`, {
+        method: "PATCH",
+        headers: supaHeaders(adminToken, { "Content-Type": "application/json" }),
+        body: JSON.stringify({ status }),
+      });
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status } : o)));
     } catch (e) {
       console.error("تعذر تحديث حالة الطلب", e);
     }
@@ -1099,17 +1193,70 @@ export default function MyWheatApp() {
       )}
 
       {/* Admin */}
-      {view === "admin" && (
-        <main className="max-w-5xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 mb-6">
+      {view === "admin" && !adminUnlocked && (
+        <main className="max-w-sm mx-auto px-4 py-16">
+          <div className="flex items-center gap-2 mb-6 justify-center">
             <ClipboardList size={20} color={BRAND.brown} />
             <h2 style={{ fontFamily: "'Amiri', serif", color: BRAND.brown }} className="text-xl font-bold">
-              لوحة الإدارة
+              تسجيل دخول الإدارة
             </h2>
           </div>
-          <p style={{ color: BRAND.brownSoft }} className="text-xs mb-6">
-            ملاحظة: هذه اللوحة غير محمية بكلمة مرور — أي شخص لديه رابط التطبيق يمكنه الوصول إليها.
-          </p>
+          <form
+            onSubmit={handleAdminLogin}
+            style={{ backgroundColor: BRAND.creamCard, borderColor: "rgba(62,42,23,0.15)" }}
+            className="border rounded-2xl p-5 flex flex-col gap-3"
+          >
+            <input
+              type="email"
+              required
+              placeholder="البريد الإلكتروني"
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
+              className="border rounded-xl px-4 py-2.5 text-sm"
+              style={{ borderColor: "rgba(62,42,23,0.2)" }}
+            />
+            <input
+              type="password"
+              required
+              placeholder="كلمة المرور"
+              value={loginPassword}
+              onChange={(e) => setLoginPassword(e.target.value)}
+              className="border rounded-xl px-4 py-2.5 text-sm"
+              style={{ borderColor: "rgba(62,42,23,0.2)" }}
+            />
+            {loginError && (
+              <div className="text-xs font-bold" style={{ color: "#B3261E" }}>
+                {loginError}
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={loggingIn}
+              style={{ backgroundColor: BRAND.gold, color: BRAND.brown }}
+              className="rounded-full py-2.5 text-sm font-bold disabled:opacity-60"
+            >
+              {loggingIn ? "جاري الدخول..." : "دخول"}
+            </button>
+          </form>
+        </main>
+      )}
+      {view === "admin" && adminUnlocked && (
+        <main className="max-w-5xl mx-auto px-4 py-6">
+          <div className="flex items-center justify-between gap-2 mb-6">
+            <div className="flex items-center gap-2">
+              <ClipboardList size={20} color={BRAND.brown} />
+              <h2 style={{ fontFamily: "'Amiri', serif", color: BRAND.brown }} className="text-xl font-bold">
+                لوحة الإدارة
+              </h2>
+            </div>
+            <button
+              onClick={handleAdminLogout}
+              className="text-xs font-bold underline"
+              style={{ color: BRAND.brownSoft }}
+            >
+              تسجيل خروج
+            </button>
+          </div>
 
           <div
             style={{ backgroundColor: "#FFF6E5", borderColor: BRAND.gold }}
