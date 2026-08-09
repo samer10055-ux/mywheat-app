@@ -26,6 +26,7 @@ import {
   Candy,
   CupSoda,
   Package,
+  Search,
 } from "lucide-react";
 
 /* ---------------------------------------------------------
@@ -640,12 +641,51 @@ export default function MyWheatApp() {
   const [products, setProducts] = useState(DEFAULT_PRODUCTS);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [category, setCategory] = useState("الكل");
+  const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState({}); // { "id::size": qty }
   const [selectedSize, setSelectedSize] = useState({}); // { productId: sizeLabel }
   const [cartOpen, setCartOpen] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "" });
   const [placing, setPlacing] = useState(false);
   const [lastOrderId, setLastOrderId] = useState(null);
+  const [trackOrderId, setTrackOrderId] = useState("");
+  const [trackPhone, setTrackPhone] = useState("");
+  const [trackResult, setTrackResult] = useState(null);
+  const [trackError, setTrackError] = useState("");
+  const [trackLoading, setTrackLoading] = useState(false);
+
+  async function handleTrackOrder(e) {
+    e.preventDefault();
+    setTrackError("");
+    setTrackResult(null);
+    setTrackLoading(true);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_order_status`, {
+        method: "POST",
+        headers: supaHeaders(null, { "Content-Type": "application/json" }),
+        body: JSON.stringify({ p_order_id: trackOrderId.trim(), p_phone: trackPhone.trim() }),
+      });
+      const rows = await res.json();
+      if (Array.isArray(rows) && rows.length > 0) {
+        setTrackResult(rows[0]);
+      } else {
+        setTrackError("ما لقينا طلب مطابق — تأكد من رقم الطلب ورقم الهاتف");
+      }
+    } catch (_) {
+      setTrackError("تعذر الاتصال، حاول مرة أخرى");
+    } finally {
+      setTrackLoading(false);
+    }
+  }
+
+  const ORDER_STATUS_LABELS = {
+    pending: "قيد المراجعة",
+    confirmed: "تم التأكيد",
+    preparing: "جاري التحضير",
+    out_for_delivery: "بالطريق للتوصيل",
+    delivered: "تم التوصيل",
+    cancelled: "ملغى",
+  };
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [savingKey, setSavingKey] = useState(null);
@@ -727,10 +767,14 @@ export default function MyWheatApp() {
     if (view === "admin") loadOrders();
   }, [view, loadOrders]);
 
-  const visibleProducts = useMemo(
-    () => products.filter((p) => category === "الكل" || p.category === category),
-    [products, category]
-  );
+  const visibleProducts = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return products.filter((p) => {
+      const inCategory = category === "الكل" || p.category === category;
+      const inSearch = !q || p.name.toLowerCase().includes(q);
+      return inCategory && inSearch;
+    });
+  }, [products, category, searchQuery]);
 
   function getSize(product, label) {
     return product.sizes.find((s) => s.label === label);
@@ -910,6 +954,15 @@ export default function MyWheatApp() {
               </button>
             )}
             {view !== "admin" && (
+              <button
+                onClick={() => setView("track")}
+                className="p-2 rounded-full hover:bg-white/10 transition"
+                title="تتبع طلبك"
+              >
+                <ClipboardList size={20} color="#E8D9BE" />
+              </button>
+            )}
+            {view !== "admin" && (
               <button onClick={() => setCartOpen(true)} className="relative p-2 rounded-full hover:bg-white/10 transition">
                 <ShoppingCart size={20} color="#E8D9BE" />
                 {cartCount > 0 && (
@@ -928,6 +981,25 @@ export default function MyWheatApp() {
 
       {view === "shop" && (
         <>
+          {/* Search bar */}
+          <div className="max-w-5xl mx-auto px-4 pt-3">
+            <div className="relative">
+              <Search
+                size={18}
+                color={BRAND.brownSoft}
+                className="absolute top-1/2 -translate-y-1/2 right-3 pointer-events-none"
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="ابحث عن منتج..."
+                style={{ backgroundColor: BRAND.creamCard, borderColor: "rgba(62,42,23,0.15)", color: BRAND.brown }}
+                className="w-full border rounded-full py-2.5 pr-10 pl-4 text-sm outline-none"
+              />
+            </div>
+          </div>
+
           {/* Promo banner carousel */}
           <PromoBanner />
 
@@ -967,8 +1039,26 @@ export default function MyWheatApp() {
           {/* Product grid */}
           <main className="max-w-5xl mx-auto px-4 py-6">
             {loadingProducts ? (
-              <div className="flex items-center justify-center py-24" style={{ color: BRAND.brownSoft }}>
-                <Loader2 className="animate-spin ml-2" size={22} /> جاري تحميل المنتجات...
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div
+                    key={i}
+                    style={{ backgroundColor: BRAND.creamCard }}
+                    className="rounded-2xl overflow-hidden animate-pulse"
+                  >
+                    <div style={{ backgroundColor: "rgba(62,42,23,0.08)" }} className="w-full aspect-square" />
+                    <div className="p-3 space-y-2">
+                      <div style={{ backgroundColor: "rgba(62,42,23,0.08)" }} className="h-3 w-1/2 rounded" />
+                      <div style={{ backgroundColor: "rgba(62,42,23,0.08)" }} className="h-4 w-3/4 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : visibleProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24 text-center" style={{ color: BRAND.brownSoft }}>
+                <Search size={32} className="mb-2" />
+                <div className="font-bold">ما في نتائج مطابقة</div>
+                <div className="text-sm">جرب كلمة بحث تانية أو تصنيف مختلف</div>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -1220,6 +1310,89 @@ export default function MyWheatApp() {
           </p>
           <button onClick={() => setView("shop")} style={{ backgroundColor: BRAND.brown }} className="text-white font-bold px-6 py-3 rounded-xl">
             متابعة التسوّق
+          </button>
+          <div className="mt-3">
+            <button
+              onClick={() => {
+                setTrackOrderId(lastOrderId || "");
+                setView("track");
+              }}
+              className="text-sm font-bold underline"
+              style={{ color: BRAND.brownSoft }}
+            >
+              تتبع حالة طلبك
+            </button>
+          </div>
+        </main>
+      )}
+
+      {/* Track order */}
+      {view === "track" && (
+        <main className="max-w-sm mx-auto px-4 py-16">
+          <div className="flex items-center gap-2 mb-6 justify-center">
+            <ClipboardList size={20} color={BRAND.brown} />
+            <h2 style={{ fontFamily: "'Amiri', serif", color: BRAND.brown }} className="text-xl font-bold">
+              تتبع طلبك
+            </h2>
+          </div>
+          <form
+            onSubmit={handleTrackOrder}
+            style={{ backgroundColor: BRAND.creamCard, borderColor: "rgba(62,42,23,0.15)" }}
+            className="border rounded-2xl p-5 flex flex-col gap-3"
+          >
+            <input
+              type="text"
+              required
+              placeholder="رقم الطلب"
+              value={trackOrderId}
+              onChange={(e) => setTrackOrderId(e.target.value)}
+              className="border rounded-xl px-4 py-2.5 text-sm"
+              style={{ borderColor: "rgba(62,42,23,0.2)" }}
+            />
+            <input
+              type="tel"
+              required
+              placeholder="رقم الهاتف"
+              value={trackPhone}
+              onChange={(e) => setTrackPhone(e.target.value)}
+              className="border rounded-xl px-4 py-2.5 text-sm"
+              style={{ borderColor: "rgba(62,42,23,0.2)" }}
+            />
+            {trackError && (
+              <div className="text-xs font-bold" style={{ color: "#B3261E" }}>
+                {trackError}
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={trackLoading}
+              style={{ backgroundColor: BRAND.gold, color: BRAND.brown }}
+              className="rounded-full py-2.5 text-sm font-bold disabled:opacity-60"
+            >
+              {trackLoading ? "جاري البحث..." : "تحقق من الحالة"}
+            </button>
+          </form>
+
+          {trackResult && (
+            <div
+              style={{ backgroundColor: "#FFF6E5", borderColor: BRAND.gold }}
+              className="border rounded-2xl p-4 mt-4"
+            >
+              <div className="text-sm font-bold mb-1" style={{ color: BRAND.brown }}>
+                حالة الطلب: {ORDER_STATUS_LABELS[trackResult.status] || trackResult.status}
+              </div>
+              <div className="text-xs" style={{ color: BRAND.brownSoft }}>
+                الإجمالي: {fmt(trackResult.total)}
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={() => setView("shop")}
+            className="text-sm font-bold underline mt-6 block mx-auto"
+            style={{ color: BRAND.brownSoft }}
+          >
+            رجوع للمتجر
           </button>
         </main>
       )}
