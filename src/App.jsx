@@ -759,7 +759,7 @@ export default function MyWheatApp() {
   async function uploadToStorage(path, blob) {
     const res = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${path}`, {
       method: "POST",
-      headers: supaHeaders(null, { "Content-Type": blob.type || "image/jpeg", "x-upsert": "true" }),
+      headers: supaHeaders(adminToken, { "Content-Type": blob.type || "image/jpeg", "x-upsert": "true" }),
       body: blob,
     });
     if (!res.ok) {
