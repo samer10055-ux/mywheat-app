@@ -455,6 +455,26 @@ function useGoogleFonts() {
   }, []);
 }
 
+function useImageProtection() {
+  useEffect(() => {
+    const blockContextMenu = (e) => e.preventDefault();
+    const blockDrag = (e) => e.preventDefault();
+    const blockKeys = (e) => {
+      const k = e.key ? e.key.toLowerCase() : "";
+      const isSave = (e.ctrlKey || e.metaKey) && (k === "s" || k === "u");
+      if (isSave) e.preventDefault();
+    };
+    document.addEventListener("contextmenu", blockContextMenu);
+    document.addEventListener("dragstart", blockDrag);
+    document.addEventListener("keydown", blockKeys);
+    return () => {
+      document.removeEventListener("contextmenu", blockContextMenu);
+      document.removeEventListener("dragstart", blockDrag);
+      document.removeEventListener("keydown", blockKeys);
+    };
+  }, []);
+}
+
 function WheatMark({ size = 28, color = BRAND.gold }) {
   return <Wheat size={size} color={color} strokeWidth={2} />;
 }
@@ -559,6 +579,7 @@ function supaHeaders(accessToken, extra) {
 
 export default function MyWheatApp() {
   useGoogleFonts();
+  useImageProtection();
 
   const [view, setView] = useState("shop"); // shop | checkout | confirmed | admin
   const [adminUnlocked, setAdminUnlocked] = useState(false);
@@ -826,9 +847,20 @@ export default function MyWheatApp() {
   return (
     <div
       dir="rtl"
-      style={{ backgroundColor: BRAND.cream, fontFamily: "'Tajawal', sans-serif", minHeight: "100vh" }}
+      style={{
+        backgroundColor: BRAND.cream,
+        fontFamily: "'Tajawal', sans-serif",
+        minHeight: "100vh",
+        WebkitUserSelect: "none",
+        userSelect: "none",
+      }}
       className="text-right"
     >
+      <style>{`
+        img { -webkit-user-drag: none; user-drag: none; pointer-events: none; }
+        input, textarea { user-select: text; -webkit-user-select: text; pointer-events: auto; }
+        button, a, [role="button"] { pointer-events: auto; }
+      `}</style>
       {/* Logo Banner */}
       <div className="relative" style={{ perspective: "1000px" }}>
         <div
