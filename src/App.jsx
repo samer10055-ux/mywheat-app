@@ -27,6 +27,7 @@ import {
   CupSoda,
   Package,
   Search,
+  Gift,
 } from "lucide-react";
 
 /* ---------------------------------------------------------
@@ -47,6 +48,7 @@ const BRAND = {
 
 const CATEGORIES = [
   "الكل",
+  "عروض",
   "كورن فليكس",
   "سيريال بار",
   "بسكويت",
@@ -60,6 +62,7 @@ const CATEGORIES = [
 
 const CATEGORY_ICONS = {
   "الكل": LayoutGrid,
+  "عروض": Gift,
   "كورن فليكس": Wheat,
   "سيريال بار": Croissant,
   "بسكويت": Cookie,
@@ -186,6 +189,7 @@ const PRODUCT_SIZE_IMAGES = {
 };
 
 const BASE_ITEMS = [
+  { id: "promo-cf160-bar-free", category: "عروض", name: "عرض كورن فليكس 160g × 2 + بار مجاناً", base: 350 },
   { id: "cf-fruit", category: "كورن فليكس", name: "كورن فليكس فروت فيتا", base: 11000 },
   { id: "cf-honey", category: "كورن فليكس", name: "فلور ويت بالعسل", base: 11000 },
   { id: "cf-choco", category: "كورن فليكس", name: "غوريو بالس شوكولا داكنة", base: 11500 },
@@ -424,6 +428,14 @@ const DEFAULT_PRODUCTS = BASE_ITEMS.map((it) => {
       category: it.category,
       name: it.name,
       sizes: [{ label: "باكيت 34g", price: it.base, inStock: true }],
+    };
+  }
+  if (it.category === "عروض") {
+    return {
+      id: it.id,
+      category: it.category,
+      name: it.name,
+      sizes: [{ label: "العرض", price: it.base, inStock: true }],
     };
   }
   return {
