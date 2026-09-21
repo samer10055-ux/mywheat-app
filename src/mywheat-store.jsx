@@ -24,11 +24,11 @@ const CATEGORIES = [
 
 // tone = لون شريط العلبة (يميّز النكهة على الرف)
 const PRODUCTS = [
-  { id: 1,  name: "فروت فيتا",   sub: "حلقات فواكه",        cat: "cereal",  tone: "#D2402F", gf: true,  sizes: [{ g: 160, price: 12000 }, { g: 350, price: 24000 }] },
-  { id: 2,  name: "فلور ويت",    sub: "بنكهة العسل",         cat: "cereal",  tone: "#D9A521", gf: true,  sizes: [{ g: 160, price: 12000 }, { g: 400, price: 27000 }] },
+  { id: 1,  name: "فروت فيتا",   sub: "حلقات فواكه",        cat: "cereal",  tone: "#D2402F", gf: true,  sizes: [{ g: 160, price: 180 }, { g: 350, price: 24000 }] },
+  { id: 2,  name: "فلور ويت",    sub: "بنكهة العسل",         cat: "cereal",  tone: "#D9A521", gf: true,  sizes: [{ g: 160, price: 180 }, { g: 400, price: 27000 }] },
   { id: 3,  name: "غوريو رينجز", sub: "حلقات شوكولا داكنة",  cat: "cereal",  tone: "#4A2C1D", gf: false, sizes: [{ g: 220, price: 16000 }, { g: 400, price: 28000 }] },
   { id: 4,  name: "ميلثي كورن",  sub: "رقائق ذرة سادة",      cat: "cereal",  tone: "#E0B84C", gf: true,  sizes: [{ g: 250, price: 15000 }, { g: 400, price: 26000 }] },
-  { id: 5,  name: "بوبي بالس",   sub: "كرات الشوكولا",       cat: "cereal",  tone: "#6B3A1E", gf: false, sizes: [{ g: 160, price: 13000 }, { g: 350, price: 25000 }] },
+  { id: 5,  name: "بوبي بالس",   sub: "كرات الشوكولا",       cat: "cereal",  tone: "#6B3A1E", gf: false, sizes: [{ g: 160, price: 180 }, { g: 350, price: 25000 }] },
   { id: 6,  name: "كرانشي",      sub: "مقرمش",               cat: "cereal",  tone: "#C77C25", gf: false, sizes: [{ g: 220, price: 14000 }] },
   { id: 7,  name: "شوفانتينو",   sub: "بالشوفان",            cat: "cereal",  tone: "#8A7346", gf: false, sizes: [{ g: 350, price: 26000 }] },
   { id: 8,  name: "ميلثي ويت",   sub: "بالنخالة",            cat: "cereal",  tone: "#7A5C3A", gf: false, sizes: [{ g: 400, price: 27000 }] },
