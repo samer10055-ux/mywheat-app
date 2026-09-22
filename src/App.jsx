@@ -231,7 +231,7 @@ const BASE_ITEMS = [
   { id: "bis-milk", category: "بسكويت", name: "بسكويت بالحليب", base: 30 },
   { id: "bis-cinnamon", category: "بسكويت", name: "بسكويت دايجستيف بالقرفة", base: 30 },
 
-  { id: "donut-mix", category: "دونات", name: "دونات بنكهات متنوعة", base: 168 },
+  { id: "donut-mix", category: "دونات", name: "دونات بنكهات متنوعة", base: 190 },
 
 
   { id: "pasta-vermicelli", category: "مكرونة", name: "شعيرية", base: 52 },
