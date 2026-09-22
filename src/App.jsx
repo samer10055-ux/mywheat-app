@@ -234,10 +234,10 @@ const BASE_ITEMS = [
   { id: "donut-mix", category: "دونات", name: "دونات بنكهات متنوعة", base: 190 },
 
 
-  { id: "pasta-vermicelli", category: "مكرونة", name: "شعيرية", base: 52 },
-  { id: "pasta-elbow", category: "مكرونة", name: "معكرونة كوع", base: 65 },
-  { id: "pasta-spiral", category: "مكرونة", name: "معكرونة برغي", base: 52 },
-  { id: "pasta-bori", category: "مكرونة", name: "معكرونة بوري", base: 65 },
+  { id: "pasta-vermicelli", category: "مكرونة", name: "شعيرية", base: 55 },
+  { id: "pasta-elbow", category: "مكرونة", name: "معكرونة كوع", base: 70 },
+  { id: "pasta-spiral", category: "مكرونة", name: "معكرونة برغي", base: 55 },
+  { id: "pasta-bori", category: "مكرونة", name: "معكرونة بوري", base: 70 },
 
   { id: "chips-crispy", category: "كريسبي", name: "كريسبي دجاج مع بهار خاص ( رقائق الذره)", base: 200 },
   { id: "chips-spicy", category: "كريسبي", name: "كريسبي سبايسي مع بهار خاص (رقائق الذره)", base: 200 },
