@@ -440,7 +440,7 @@ const DEFAULT_PRODUCTS = BASE_ITEMS.map((it) => {
     };
   }
   if (
-    ["cf-fruit", "cf-honey", "cf-choco", "cf-milthy-choco", "cf-plain", "cf-balls"].includes(
+    ["cf-fruit", "cf-honey", "cf-choco", "cf-milthy-choco", "cf-plain", "cf-balls", "cf-crunchy"].includes(
       it.id
     )
   ) {
