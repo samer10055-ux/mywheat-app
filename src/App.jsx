@@ -205,12 +205,12 @@ const BASE_ITEMS = [
   { id: "cf-bar-milthy-corn", category: "كورن فليكس", name: "كورن فليكس بار ميلثي كورن 180 g", base: 160 },
   { id: "cf-bar-milthy-choco", category: "كورن فليكس", name: "كورن فليكس بار ميلثي شوكليت 180 g", base: 160 },
 
-  { id: "gf-balls", category: "كورن فليكس", name: "بوبي بالس (خالي من الغلوتين)", base: 195 },
-  { id: "gf-choco", category: "كورن فليكس", name: "غوريو بالس (خالي من الغلوتين)", base: 195 },
-  { id: "gf-fruit", category: "كورن فليكس", name: "فروت فيتا (خالي من الغلوتين)", base: 195 },
-  { id: "gf-flower", category: "كورن فليكس", name: "فلاور ويت (خالي من الغلوتين)", base: 195 },
-  { id: "gf-milthy-corn", category: "كورن فليكس", name: "ميلثي كورن ( خالي من الغلوتين )", base: 195 },
-  { id: "gf-milthy-choco", category: "كورن فليكس", name: "ميلثي شوكليت (خالي من الغلوتين)", base: 195 },
+  { id: "gf-balls", category: "كورن فليكس", name: "بوبي بالس (خالي من الغلوتين)", base: 220 },
+  { id: "gf-choco", category: "كورن فليكس", name: "غوريو بالس (خالي من الغلوتين)", base: 220 },
+  { id: "gf-fruit", category: "كورن فليكس", name: "فروت فيتا (خالي من الغلوتين)", base: 220 },
+  { id: "gf-flower", category: "كورن فليكس", name: "فلاور ويت (خالي من الغلوتين)", base: 220 },
+  { id: "gf-milthy-corn", category: "كورن فليكس", name: "ميلثي كورن ( خالي من الغلوتين )", base: 220 },
+  { id: "gf-milthy-choco", category: "كورن فليكس", name: "ميلثي شوكليت (خالي من الغلوتين)", base: 220 },
 
   { id: "bar-choco", category: "سيريال بار", name: "سيريال بار شوكولا", base: 186 },
   { id: "bar-orange", category: "سيريال بار", name: "سيريال بار برتقال", base: 186 },
