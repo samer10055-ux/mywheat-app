@@ -28,6 +28,7 @@ import {
   Package,
   Search,
   Gift,
+  TrendingUp,
 } from "lucide-react";
 
 /* ---------------------------------------------------------
@@ -691,6 +692,7 @@ export default function MyWheatApp() {
 
   const [products, setProducts] = useState(DEFAULT_PRODUCTS);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [bestSellerIds, setBestSellerIds] = useState([]);
   const [category, setCategory] = useState("الكل");
   const [searchQuery, setSearchQuery] = useState("");
   const [cart, setCart] = useState({}); // { "id::size": qty }
@@ -769,6 +771,22 @@ export default function MyWheatApp() {
         setProducts(DEFAULT_PRODUCTS);
       } finally {
         setLoadingProducts(false);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.best-sellers&select=data`, {
+          headers: supaHeaders(null),
+        });
+        const rows = await res.json();
+        if (Array.isArray(rows) && rows.length > 0 && Array.isArray(rows[0].data)) {
+          setBestSellerIds(rows[0].data);
+        }
+      } catch (e) {
+        console.error("تعذر تحميل الأكثر مبيعاً", e);
       }
     })();
   }, []);
@@ -919,14 +937,18 @@ export default function MyWheatApp() {
     if (view === "admin") loadOrders();
   }, [view, loadOrders]);
 
+  const BEST_SELLERS_CATEGORY = "الأكثر مبيعاً";
+
   const visibleProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return products.filter((p) => {
-      const inCategory = category === "الكل" || p.category === category;
+      const inCategory =
+        category === "الكل" ||
+        (category === BEST_SELLERS_CATEGORY ? bestSellerIds.includes(p.id) : p.category === category);
       const inSearch = !q || p.name.toLowerCase().includes(q);
       return inCategory && inSearch;
     });
-  }, [products, category, searchQuery]);
+  }, [products, category, searchQuery, bestSellerIds]);
 
   function getSize(product, label) {
     return product.sizes.find((s) => s.label === label);
@@ -962,10 +984,13 @@ export default function MyWheatApp() {
   }
 
   const WHATSAPP_NUMBER = "963957289271";
+  const MIN_ORDER_TOTAL = 500;
+  const LOW_STOCK_THRESHOLD = 5;
 
   async function placeOrder(e) {
     e.preventDefault();
     if (!form.name.trim() || !form.phone.trim() || cartItems.length === 0) return;
+    if (cartTotal < MIN_ORDER_TOTAL) return;
     setPlacing(true);
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -985,6 +1010,25 @@ export default function MyWheatApp() {
       });
     } catch (e) {
       console.error("تعذر حفظ الطلب", e);
+    }
+
+    try {
+      const updatedProducts = products.map((p) => {
+        const boughtForProduct = cartItems.filter((i) => i.productId === p.id);
+        if (boughtForProduct.length === 0) return p;
+        return {
+          ...p,
+          sizes: p.sizes.map((s) => {
+            const bought = boughtForProduct.find((i) => i.sizeLabel === s.label);
+            if (!bought || s.stock === undefined || s.stock === null) return s;
+            const nextStock = Math.max(0, s.stock - bought.qty);
+            return { ...s, stock: nextStock, inStock: nextStock > 0 };
+          }),
+        };
+      });
+      await saveProducts(updatedProducts);
+    } catch (e) {
+      console.error("تعذر تحديث كمية المخزون", e);
     }
 
     const lines = [];
@@ -1015,6 +1059,44 @@ export default function MyWheatApp() {
     setPlacing(false);
   }
 
+  const ORDER_STATUS_WHATSAPP_MESSAGES = {
+    confirmed: "تم تأكيد طلبك، رح نبلّشوا فيه قريباً",
+    preparing: "طلبك هلق قيد التحضير",
+    out_for_delivery: "طلبك بالطريق إلكم توصيل",
+    delivered: "تم توصيل طلبك، بالهنا والشفا 🌾",
+    cancelled: "للأسف تم إلغاء طلبك، لأي استفسار تواصلوا معنا",
+  };
+
+  const [updatingBestSellers, setUpdatingBestSellers] = useState(false);
+  async function updateBestSellers() {
+    setUpdatingBestSellers(true);
+    try {
+      const qtyByProduct = {};
+      orders.forEach((o) => {
+        (o.items || []).forEach((it) => {
+          qtyByProduct[it.productId] = (qtyByProduct[it.productId] || 0) + (it.qty || 0);
+        });
+      });
+      const topIds = Object.entries(qtyByProduct)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([id]) => id);
+      await fetch(`${SUPABASE_URL}/rest/v1/products`, {
+        method: "POST",
+        headers: supaHeaders(adminToken, {
+          "Content-Type": "application/json",
+          Prefer: "resolution=merge-duplicates",
+        }),
+        body: JSON.stringify({ id: "best-sellers", data: topIds, updated_at: new Date().toISOString() }),
+      });
+      setBestSellerIds(topIds);
+    } catch (e) {
+      console.error("تعذر تحديث الأكثر مبيعاً", e);
+    } finally {
+      setUpdatingBestSellers(false);
+    }
+  }
+
   async function updateOrderStatus(order, status) {
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${order.id}`, {
@@ -1023,6 +1105,14 @@ export default function MyWheatApp() {
         body: JSON.stringify({ status }),
       });
       setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status } : o)));
+      const note = ORDER_STATUS_WHATSAPP_MESSAGES[status];
+      if (note && order.phone) {
+        const text = encodeURIComponent(
+          `مرحبا ${order.customer_name || ""}\nطلبك رقم ${order.id}\n${note}\nماي ويت 🌾`
+        );
+        const phone = order.phone.replace(/[^0-9]/g, "");
+        window.open(`https://wa.me/${phone}?text=${text}`, "_blank");
+      }
     } catch (e) {
       console.error("تعذر تحديث حالة الطلب", e);
     }
@@ -1160,6 +1250,28 @@ export default function MyWheatApp() {
           {/* Categories — icon grid */}
           <div className="max-w-5xl mx-auto px-2 pt-4 pb-2">
             <div className="flex gap-4 overflow-x-auto no-scrollbar px-2">
+              {bestSellerIds.length > 0 && (
+                <button
+                  onClick={() => setCategory(BEST_SELLERS_CATEGORY)}
+                  className="flex flex-col items-center gap-1.5 shrink-0"
+                >
+                  <span
+                    style={{
+                      backgroundColor: category === BEST_SELLERS_CATEGORY ? BRAND.gold : BRAND.creamCard,
+                      borderColor: category === BEST_SELLERS_CATEGORY ? BRAND.gold : "rgba(62,42,23,0.15)",
+                    }}
+                    className="w-16 h-16 rounded-full border-2 flex items-center justify-center shadow-sm transition"
+                  >
+                    <TrendingUp size={26} color={category === BEST_SELLERS_CATEGORY ? BRAND.brown : BRAND.brownSoft} />
+                  </span>
+                  <span
+                    style={{ color: category === BEST_SELLERS_CATEGORY ? BRAND.brown : BRAND.brownSoft }}
+                    className="text-[11px] font-bold whitespace-nowrap"
+                  >
+                    {BEST_SELLERS_CATEGORY}
+                  </span>
+                </button>
+              )}
               {CATEGORIES.map((c) => {
                 const active = c === category;
                 const Icon = CATEGORY_ICONS[c] || LayoutGrid;
@@ -1388,13 +1500,19 @@ export default function MyWheatApp() {
                     {fmt(cartTotal)}
                   </span>
                 </div>
+                {cartTotal < MIN_ORDER_TOTAL && (
+                  <div style={{ color: BRAND.rust }} className="text-xs font-bold text-center mb-2">
+                    الحد الأدنى للطلب {fmt(MIN_ORDER_TOTAL)} — أضف {fmt(MIN_ORDER_TOTAL - cartTotal)} لإتمام الطلب
+                  </div>
+                )}
                 <button
                   onClick={() => {
                     setCartOpen(false);
                     setView("checkout");
                   }}
+                  disabled={cartTotal < MIN_ORDER_TOTAL}
                   style={{ backgroundColor: BRAND.gold, color: BRAND.brown }}
-                  className="w-full font-bold py-3 rounded-xl flex items-center justify-center gap-2"
+                  className="w-full font-bold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   متابعة الطلب <ArrowRight size={16} />
                 </button>
@@ -1442,9 +1560,18 @@ export default function MyWheatApp() {
               </div>
             </div>
 
+            {cartTotal < MIN_ORDER_TOTAL && (
+              <div
+                style={{ backgroundColor: "#FCEFD8", color: BRAND.rust, borderColor: BRAND.gold }}
+                className="rounded-xl border px-4 py-3 text-sm font-bold text-center"
+              >
+                الحد الأدنى للطلب {fmt(MIN_ORDER_TOTAL)} — أضف {fmt(MIN_ORDER_TOTAL - cartTotal)} لإتمام الطلب
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={placing || !form.name.trim() || !form.phone.trim()}
+              disabled={placing || !form.name.trim() || !form.phone.trim() || cartTotal < MIN_ORDER_TOTAL}
               style={{ backgroundColor: BRAND.rust }}
               className="w-full text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
             >
@@ -1731,19 +1858,30 @@ export default function MyWheatApp() {
               <h3 style={{ color: BRAND.brown }} className="font-bold">
                 الطلبات الواردة
               </h3>
-              <select
-                value={orderStatusFilter}
-                onChange={(e) => setOrderStatusFilter(e.target.value)}
-                style={{ borderColor: "rgba(62,42,23,0.2)", color: BRAND.brown }}
-                className="text-xs font-bold rounded-full border px-3 py-1.5 bg-transparent"
-              >
-                <option value="all">كل الطلبات</option>
-                {Object.entries(ORDER_STATUS_LABELS).map(([val, label]) => (
-                  <option key={val} value={val}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={updateBestSellers}
+                  disabled={updatingBestSellers || orders.length === 0}
+                  style={{ backgroundColor: BRAND.green, color: "white" }}
+                  className="text-xs font-bold rounded-full px-3 py-1.5 disabled:opacity-50 flex items-center gap-1"
+                >
+                  {updatingBestSellers ? <Loader2 className="animate-spin" size={12} /> : <TrendingUp size={12} />}
+                  تحديث الأكثر مبيعاً
+                </button>
+                <select
+                  value={orderStatusFilter}
+                  onChange={(e) => setOrderStatusFilter(e.target.value)}
+                  style={{ borderColor: "rgba(62,42,23,0.2)", color: BRAND.brown }}
+                  className="text-xs font-bold rounded-full border px-3 py-1.5 bg-transparent"
+                >
+                  <option value="all">كل الطلبات</option>
+                  {Object.entries(ORDER_STATUS_LABELS).map(([val, label]) => (
+                    <option key={val} value={val}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             {loadingOrders ? (
               <div className="flex items-center gap-2 text-sm" style={{ color: BRAND.brownSoft }}>
@@ -1843,6 +1981,34 @@ export default function MyWheatApp() {
                             style={{ borderColor: BRAND.gold, color: BRAND.brown }}
                             className="w-full text-xs font-bold rounded-lg border px-1.5 py-1 bg-transparent mb-1"
                           />
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="الكمية"
+                            value={s.stock ?? ""}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v === "") {
+                                updateSize(p.id, s.label, { stock: undefined });
+                              } else {
+                                const n = Math.max(0, Number(v) || 0);
+                                updateSize(p.id, s.label, { stock: n, inStock: n > 0 });
+                              }
+                            }}
+                            style={{
+                              borderColor:
+                                s.stock !== undefined && s.stock !== null && s.stock <= LOW_STOCK_THRESHOLD
+                                  ? BRAND.rust
+                                  : BRAND.gold,
+                              color: BRAND.brown,
+                            }}
+                            className="w-full text-[10px] rounded-lg border px-1.5 py-1 bg-transparent mb-1"
+                          />
+                          {s.stock !== undefined && s.stock !== null && s.stock <= LOW_STOCK_THRESHOLD && s.stock > 0 && (
+                            <div style={{ color: BRAND.rust }} className="text-[9px] font-bold mb-1 text-center">
+                              ⚠️ الكمية منخفضة
+                            </div>
+                          )}
                           <button
                             onClick={() => updateSize(p.id, s.label, { inStock: !s.inStock })}
                             style={{ backgroundColor: s.inStock ? BRAND.green : "#B9AE99", color: "white" }}
