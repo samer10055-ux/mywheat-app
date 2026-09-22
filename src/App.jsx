@@ -251,6 +251,7 @@ const BASE_ITEMS = [
 
   { id: "sticks-turkish-salty", category: "استيكس", name: "استيكس مالح تركي 30 غرام", base: 20 },
   { id: "sticks-turkish-salty-100", category: "استيكس", name: "استيكس مالح تركي 100 غرام", base: 50 },
+  { id: "sticks-ani-sesame", category: "استيكس", name: "اعواد السمسم المالح تركي (ANI)", base: 50 },
 
   { id: "juice-lamar-1l", category: "عصائر", name: "عصير لمار المصري 1 لتر", base: 140 },
   { id: "juice-lamar-200", category: "عصائر", name: "عصير لمار المصري 200 مل", base: 30 },
@@ -317,6 +318,14 @@ const DEFAULT_PRODUCTS = BASE_ITEMS.map((it) => {
       category: it.category,
       name: it.name,
       sizes: [{ label: "100g", price: it.base, inStock: true }],
+    };
+  }
+  if (it.id === "sticks-ani-sesame") {
+    return {
+      id: it.id,
+      category: it.category,
+      name: it.name,
+      sizes: [{ label: "35g", price: it.base, inStock: true }],
     };
   }
   if (
