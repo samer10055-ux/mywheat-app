@@ -198,8 +198,8 @@ const BASE_ITEMS = [
   { id: "cf-plain", category: "كورن فليكس", name: "ميلثي كورن سادة", base: 10500 },
   { id: "cf-balls", category: "كورن فليكس", name: "بوبي بالس كرات شوكولا", base: 11500 },
   { id: "cf-crunchy", category: "كورن فليكس", name: "بوبي كرانشي", base: 11000 },
-  { id: "cf-choco-oat", category: "كورن فليكس", name: "شوكو شوفنتينو", base: 195 },
-  { id: "cf-bran", category: "كورن فليكس", name: "ميلثي ويت (نخالة)", base: 195 },
+  { id: "cf-choco-oat", category: "كورن فليكس", name: "شوكو شوفنتينو", base: 220 },
+  { id: "cf-bran", category: "كورن فليكس", name: "ميلثي ويت (نخالة)", base: 220 },
   { id: "cf-bar-fruit", category: "كورن فليكس", name: "كورن فليكس بار فروت فيتا 180 g", base: 135 },
   { id: "cf-bar-flower", category: "كورن فليكس", name: "كورن فليكس بار فلاور ويت 180 g", base: 135 },
   { id: "cf-bar-milthy-corn", category: "كورن فليكس", name: "كورن فليكس بار ميلثي كورن 180 g", base: 135 },
@@ -448,7 +448,7 @@ const DEFAULT_PRODUCTS = BASE_ITEMS.map((it) => {
       id: it.id,
       category: it.category,
       name: it.name,
-      sizes: makeSizes({ "160g": 180 }),
+      sizes: makeSizes({ "160g": 180, "220g": 220 }),
     };
   }
   return {
