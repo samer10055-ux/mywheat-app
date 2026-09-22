@@ -90,10 +90,10 @@ const SIZE_FIXED_PRICE = {
   "كيس 250g": 160,
 };
 
-function makeSizes() {
+function makeSizes(overrides = {}) {
   return SIZE_LABELS.map((label) => ({
     label,
-    price: SIZE_FIXED_PRICE[label],
+    price: overrides[label] ?? SIZE_FIXED_PRICE[label],
     inStock: true,
   }));
 }
@@ -437,6 +437,18 @@ const DEFAULT_PRODUCTS = BASE_ITEMS.map((it) => {
       category: it.category,
       name: it.name,
       sizes: [{ label: "العرض", price: it.base, inStock: true }],
+    };
+  }
+  if (
+    ["cf-fruit", "cf-honey", "cf-choco", "cf-milthy-choco", "cf-plain", "cf-balls"].includes(
+      it.id
+    )
+  ) {
+    return {
+      id: it.id,
+      category: it.category,
+      name: it.name,
+      sizes: makeSizes({ "160g": 180 }),
     };
   }
   return {
