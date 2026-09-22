@@ -440,10 +440,18 @@ const DEFAULT_PRODUCTS = BASE_ITEMS.map((it) => {
     };
   }
   if (
-    ["cf-fruit", "cf-honey", "cf-choco", "cf-milthy-choco", "cf-plain", "cf-balls", "cf-crunchy"].includes(
+    ["cf-fruit", "cf-honey", "cf-choco", "cf-milthy-choco", "cf-plain", "cf-balls"].includes(
       it.id
     )
   ) {
+    return {
+      id: it.id,
+      category: it.category,
+      name: it.name,
+      sizes: makeSizes({ "160g": 180, "220g": 220, "350g": 290 }),
+    };
+  }
+  if (it.id === "cf-crunchy") {
     return {
       id: it.id,
       category: it.category,
