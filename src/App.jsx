@@ -239,9 +239,9 @@ const BASE_ITEMS = [
   { id: "pasta-spiral", category: "مكرونة", name: "معكرونة برغي", base: 55 },
   { id: "pasta-bori", category: "مكرونة", name: "معكرونة بوري", base: 70 },
 
-  { id: "chips-crispy", category: "كريسبي", name: "كريسبي دجاج مع بهار خاص ( رقائق الذره)", base: 200 },
-  { id: "chips-spicy", category: "كريسبي", name: "كريسبي سبايسي مع بهار خاص (رقائق الذره)", base: 200 },
-  { id: "chips-fish", category: "كريسبي", name: "كريسبي سمك ( رقائق الذره )", base: 200 },
+  { id: "chips-crispy", category: "كريسبي", name: "كريسبي دجاج مع بهار خاص ( رقائق الذره)", base: 220 },
+  { id: "chips-spicy", category: "كريسبي", name: "كريسبي سبايسي مع بهار خاص (رقائق الذره)", base: 220 },
+  { id: "chips-fish", category: "كريسبي", name: "كريسبي سمك ( رقائق الذره )", base: 220 },
 
   { id: "bis-prince-turkish", category: "بسكويت", name: "بيغ برينس المحشي تركي", base: 155 },
   { id: "bis-moon-turkish", category: "بسكويت", name: "مون المحشي تركي", base: 61 },
