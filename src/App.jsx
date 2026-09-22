@@ -440,10 +440,18 @@ const DEFAULT_PRODUCTS = BASE_ITEMS.map((it) => {
     };
   }
   if (
-    ["cf-fruit", "cf-honey", "cf-choco", "cf-milthy-choco", "cf-plain", "cf-balls"].includes(
+    ["cf-fruit", "cf-honey", "cf-choco", "cf-plain", "cf-balls"].includes(
       it.id
     )
   ) {
+    return {
+      id: it.id,
+      category: it.category,
+      name: it.name,
+      sizes: makeSizes({ "160g": 180, "220g": 220, "350g": 290, "كيس 250g": 185 }),
+    };
+  }
+  if (it.id === "cf-milthy-choco") {
     return {
       id: it.id,
       category: it.category,
@@ -456,7 +464,7 @@ const DEFAULT_PRODUCTS = BASE_ITEMS.map((it) => {
       id: it.id,
       category: it.category,
       name: it.name,
-      sizes: makeSizes({ "160g": 180, "220g": 220 }),
+      sizes: makeSizes({ "160g": 180, "220g": 220, "كيس 250g": 185 }),
     };
   }
   return {
