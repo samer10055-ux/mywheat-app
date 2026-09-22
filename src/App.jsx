@@ -456,7 +456,7 @@ const DEFAULT_PRODUCTS = BASE_ITEMS.map((it) => {
       id: it.id,
       category: it.category,
       name: it.name,
-      sizes: makeSizes({ "160g": 180, "220g": 220, "350g": 290 }),
+      sizes: makeSizes({ "160g": 180, "220g": 220, "350g": 290 }, ["كيس 250g"]),
     };
   }
   if (it.id === "cf-crunchy") {
