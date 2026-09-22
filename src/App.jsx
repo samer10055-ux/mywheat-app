@@ -243,12 +243,12 @@ const BASE_ITEMS = [
   { id: "chips-spicy", category: "كريسبي", name: "كريسبي سبايسي مع بهار خاص (رقائق الذره)", base: 220 },
   { id: "chips-fish", category: "كريسبي", name: "كريسبي سمك ( رقائق الذره )", base: 220 },
 
-  { id: "bis-prince-turkish", category: "بسكويت", name: "بيغ برينس المحشي تركي", base: 155 },
-  { id: "bis-moon-turkish", category: "بسكويت", name: "مون المحشي تركي", base: 61 },
+  { id: "bis-prince-turkish", category: "بسكويت", name: "بيغ برينس المحشي تركي", base: 160 },
+  { id: "bis-moon-turkish", category: "بسكويت", name: "مون المحشي تركي", base: 65 },
 
   { id: "jelly-turkish-aviza", category: "جيلي بون", name: "جيلي بون تركي افيزا", base: 88 },
 
-  { id: "sticks-turkish-salty", category: "استيكس", name: "استيكس مالح تركي 30 غرام", base: 15 },
+  { id: "sticks-turkish-salty", category: "استيكس", name: "استيكس مالح تركي 30 غرام", base: 20 },
   { id: "sticks-turkish-salty-100", category: "استيكس", name: "استيكس مالح تركي 100 غرام", base: 50 },
 
   { id: "juice-lamar-1l", category: "عصائر", name: "عصير لمار المصري 1 لتر", base: 150 },
