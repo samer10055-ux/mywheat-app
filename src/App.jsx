@@ -90,8 +90,8 @@ const SIZE_FIXED_PRICE = {
   "كيس 250g": 160,
 };
 
-function makeSizes(overrides = {}) {
-  return SIZE_LABELS.map((label) => ({
+function makeSizes(overrides = {}, exclude = []) {
+  return SIZE_LABELS.filter((label) => !exclude.includes(label)).map((label) => ({
     label,
     price: overrides[label] ?? SIZE_FIXED_PRICE[label],
     inStock: true,
@@ -464,7 +464,7 @@ const DEFAULT_PRODUCTS = BASE_ITEMS.map((it) => {
       id: it.id,
       category: it.category,
       name: it.name,
-      sizes: makeSizes({ "160g": 180, "220g": 220, "كيس 250g": 185 }),
+      sizes: makeSizes({ "220g": 220, "كيس 250g": 185 }, ["160g", "350g"]),
     };
   }
   return {
