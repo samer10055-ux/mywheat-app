@@ -251,7 +251,7 @@ const BASE_ITEMS = [
   { id: "sticks-turkish-salty", category: "استيكس", name: "استيكس مالح تركي 30 غرام", base: 20 },
   { id: "sticks-turkish-salty-100", category: "استيكس", name: "استيكس مالح تركي 100 غرام", base: 50 },
 
-  { id: "juice-lamar-1l", category: "عصائر", name: "عصير لمار المصري 1 لتر", base: 150 },
+  { id: "juice-lamar-1l", category: "عصائر", name: "عصير لمار المصري 1 لتر", base: 140 },
   { id: "juice-lamar-200", category: "عصائر", name: "عصير لمار المصري 200 مل", base: 30 },
 
 ];
