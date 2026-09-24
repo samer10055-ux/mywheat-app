@@ -29,6 +29,7 @@ import {
   Search,
   Gift,
   TrendingUp,
+  Share2,
 } from "lucide-react";
 
 /* ---------------------------------------------------------
@@ -987,6 +988,24 @@ export default function MyWheatApp() {
   const MIN_ORDER_TOTAL = 500;
   const LOW_STOCK_THRESHOLD = 5;
 
+  async function shareApp() {
+    const shareData = {
+      title: "ماي ويت — مؤسسة القمحة الذهبية",
+      text: "اطلب منتجات ماي ويت الأصلية مباشرة عبر التطبيق 🌾",
+      url: window.location.origin,
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (e) {
+        // المستخدم ألغى المشاركة أو صار خطأ — ما في داعي لأي إجراء
+      }
+    } else {
+      const text = encodeURIComponent(`${shareData.text}\n${shareData.url}`);
+      window.open(`https://wa.me/?text=${text}`, "_blank");
+    }
+  }
+
   async function placeOrder(e) {
     e.preventDefault();
     if (!form.name.trim() || !form.phone.trim() || cartItems.length === 0) return;
@@ -1195,6 +1214,15 @@ export default function MyWheatApp() {
                 title="لوحة الإدارة"
               >
                 <Settings size={20} color="#E8D9BE" />
+              </button>
+            )}
+            {view !== "admin" && (
+              <button
+                onClick={shareApp}
+                className="p-2 rounded-full hover:bg-white/10 transition"
+                title="شارك التطبيق"
+              >
+                <Share2 size={20} color="#E8D9BE" />
               </button>
             )}
             {view !== "admin" && (
