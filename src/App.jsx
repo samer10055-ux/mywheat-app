@@ -30,6 +30,8 @@ import {
   Gift,
   TrendingUp,
   Share2,
+  Heart,
+  RotateCcw,
 } from "lucide-react";
 
 /* ---------------------------------------------------------
@@ -704,6 +706,22 @@ export default function MyWheatApp() {
   const [lastOrderId, setLastOrderId] = useState(null);
   const [lastOrderItems, setLastOrderItems] = useState([]);
   const [lastOrderTotal, setLastOrderTotal] = useState(0);
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem("mywheat-favorites");
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [savedOrder, setSavedOrder] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem("mywheat-last-order");
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [trackOrderId, setTrackOrderId] = useState("");
   const [trackPhone, setTrackPhone] = useState("");
   const [trackResult, setTrackResult] = useState(null);
@@ -775,6 +793,19 @@ export default function MyWheatApp() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (loadingProducts || products.length === 0) return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const productId = params.get("product");
+      if (productId) {
+        const match = products.find((p) => p.id === productId);
+        if (match) setSearchQuery(match.name);
+      }
+    } catch (e) {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingProducts]);
 
   useEffect(() => {
     (async () => {
@@ -939,17 +970,22 @@ export default function MyWheatApp() {
   }, [view, loadOrders]);
 
   const BEST_SELLERS_CATEGORY = "الأكثر مبيعاً";
+  const FAVORITES_CATEGORY = "المفضلة";
 
   const visibleProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return products.filter((p) => {
       const inCategory =
         category === "الكل" ||
-        (category === BEST_SELLERS_CATEGORY ? bestSellerIds.includes(p.id) : p.category === category);
+        (category === BEST_SELLERS_CATEGORY
+          ? bestSellerIds.includes(p.id)
+          : category === FAVORITES_CATEGORY
+          ? favorites.includes(p.id)
+          : p.category === category);
       const inSearch = !q || p.name.toLowerCase().includes(q);
       return inCategory && inSearch;
     });
-  }, [products, category, searchQuery, bestSellerIds]);
+  }, [products, category, searchQuery, bestSellerIds, favorites]);
 
   function getSize(product, label) {
     return product.sizes.find((s) => s.label === label);
@@ -982,6 +1018,44 @@ export default function MyWheatApp() {
       const next = Math.max(0, current + delta);
       return { ...prev, [key]: next };
     });
+  }
+
+  function toggleFavorite(productId) {
+    setFavorites((prev) => {
+      const next = prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId];
+      try {
+        window.localStorage.setItem("mywheat-favorites", JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+  }
+
+  function reorderSavedOrder(order) {
+    if (!order || !order.items) return;
+    const next = {};
+    order.items.forEach((i) => {
+      next[cartKey(i.productId, i.sizeLabel)] = i.qty;
+    });
+    setCart(next);
+    setCartOpen(true);
+  }
+
+  async function shareProduct(p) {
+    const sizeLabel = currentSizeLabel(p);
+    const size = getSize(p, sizeLabel);
+    const shareData = {
+      title: p.name,
+      text: `${p.name} (${sizeLabel}) — ${size ? fmt(size.price) : ""} — ماي ويت 🌾`,
+      url: `${window.location.origin}/?product=${encodeURIComponent(p.id)}`,
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (e) {}
+    } else {
+      const text = encodeURIComponent(`${shareData.text}\n${shareData.url}`);
+      window.open(`https://wa.me/?text=${text}`, "_blank");
+    }
   }
 
   const WHATSAPP_NUMBER = "963957289271";
@@ -1072,6 +1146,11 @@ export default function MyWheatApp() {
     setLastOrderId(id);
     setLastOrderItems(cartItems);
     setLastOrderTotal(cartTotal);
+    try {
+      const toSave = { items: cartItems, total: cartTotal, orderId: id };
+      window.localStorage.setItem("mywheat-last-order", JSON.stringify(toSave));
+      setSavedOrder(toSave);
+    } catch (e) {}
     window.open(waUrl, "_blank");
     setCart({});
     setView("confirmed");
@@ -1300,6 +1379,32 @@ export default function MyWheatApp() {
                   </span>
                 </button>
               )}
+              {favorites.length > 0 && (
+                <button
+                  onClick={() => setCategory(FAVORITES_CATEGORY)}
+                  className="flex flex-col items-center gap-1.5 shrink-0"
+                >
+                  <span
+                    style={{
+                      backgroundColor: category === FAVORITES_CATEGORY ? BRAND.gold : BRAND.creamCard,
+                      borderColor: category === FAVORITES_CATEGORY ? BRAND.gold : "rgba(62,42,23,0.15)",
+                    }}
+                    className="w-16 h-16 rounded-full border-2 flex items-center justify-center shadow-sm transition"
+                  >
+                    <Heart
+                      size={26}
+                      color={category === FAVORITES_CATEGORY ? BRAND.brown : BRAND.brownSoft}
+                      fill={category === FAVORITES_CATEGORY ? BRAND.brown : "none"}
+                    />
+                  </span>
+                  <span
+                    style={{ color: category === FAVORITES_CATEGORY ? BRAND.brown : BRAND.brownSoft }}
+                    className="text-[11px] font-bold whitespace-nowrap"
+                  >
+                    {FAVORITES_CATEGORY}
+                  </span>
+                </button>
+              )}
               {CATEGORIES.map((c) => {
                 const active = c === category;
                 const Icon = CATEGORY_ICONS[c] || LayoutGrid;
@@ -1373,6 +1478,28 @@ export default function MyWheatApp() {
                           className="relative w-full aspect-square flex items-center justify-center p-3"
                           style={{ backgroundColor: BRAND.cream }}
                         >
+                          <div className="absolute top-2 left-2 flex flex-col gap-1.5 z-10">
+                            <button
+                              onClick={() => toggleFavorite(p.id)}
+                              style={{ backgroundColor: "rgba(255,255,255,0.85)" }}
+                              className="w-7 h-7 rounded-full flex items-center justify-center shadow-sm"
+                              title="أضف للمفضلة"
+                            >
+                              <Heart
+                                size={15}
+                                color={BRAND.rust}
+                                fill={favorites.includes(p.id) ? BRAND.rust : "none"}
+                              />
+                            </button>
+                            <button
+                              onClick={() => shareProduct(p)}
+                              style={{ backgroundColor: "rgba(255,255,255,0.85)" }}
+                              className="w-7 h-7 rounded-full flex items-center justify-center shadow-sm"
+                              title="شارك المنتج"
+                            >
+                              <Share2 size={14} color={BRAND.brown} />
+                            </button>
+                          </div>
                           <img
                             src={displayImage}
                             alt={`${p.name} ${sizeLabel}`}
@@ -1492,6 +1619,15 @@ export default function MyWheatApp() {
                   >
                     تصفّح المنتجات
                   </button>
+                  {savedOrder && savedOrder.items && savedOrder.items.length > 0 && (
+                    <button
+                      onClick={() => reorderSavedOrder(savedOrder)}
+                      style={{ borderColor: BRAND.gold, color: BRAND.brown }}
+                      className="text-xs font-bold px-4 py-2 rounded-full border flex items-center gap-1.5 mt-1"
+                    >
+                      <RotateCcw size={13} /> أعد طلبيتك السابقة
+                    </button>
+                  )}
                 </div>
               ) : (
                 cartItems.map((i) => (
@@ -1653,6 +1789,15 @@ export default function MyWheatApp() {
           <button onClick={() => setView("shop")} style={{ backgroundColor: BRAND.brown }} className="text-white font-bold px-6 py-3 rounded-xl">
             متابعة التسوّق
           </button>
+          {lastOrderItems.length > 0 && (
+            <button
+              onClick={() => reorderSavedOrder({ items: lastOrderItems })}
+              style={{ borderColor: BRAND.gold, color: BRAND.brown }}
+              className="mt-3 border font-bold px-6 py-3 rounded-xl w-full flex items-center justify-center gap-2"
+            >
+              <RotateCcw size={16} /> اطلب نفس الطلبية مرة تانية
+            </button>
+          )}
           <div className="mt-3">
             <button
               onClick={() => {
