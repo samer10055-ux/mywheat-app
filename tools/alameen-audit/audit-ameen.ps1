@@ -71,12 +71,14 @@ $totalIssues += $r3.Rows.Count
 [void]$sections.Add("<h2>3. Cash receipt/payment vouchers with negative values</h2>" + (Table-ToHtml $r3 "No vouchers with negative values."))
 
 # ===== 2. Inventory checks =====
-$q4 = "SELECT mt.Name, mt.Code, ms.Qty FROM ms000 ms JOIN mt000 mt ON mt.GUID = ms.MatGUID WHERE ms.Qty < 0 ORDER BY ms.Qty ASC"
+# Qty is a float column; tiny values like -1E-13 are rounding noise, not real negative
+# stock. Only flag a meaningful shortage (more than 0.01 units negative).
+$q4 = "SELECT mt.Name, mt.Code, ms.Qty FROM ms000 ms JOIN mt000 mt ON mt.GUID = ms.MatGUID WHERE ms.Qty < -0.01 ORDER BY ms.Qty ASC"
 $r4 = Run-Query $cs $q4
 $totalIssues += $r4.Rows.Count
 [void]$sections.Add("<h2>4. Negative stock balance (per store)</h2>" + (Table-ToHtml $r4 "No negative per-store stock balances."))
 
-$q5 = "SELECT mt.Name, mt.Code, mt.Qty FROM mt000 mt WHERE mt.Qty < 0 ORDER BY mt.Qty ASC"
+$q5 = "SELECT mt.Name, mt.Code, mt.Qty FROM mt000 mt WHERE mt.Qty < -0.01 ORDER BY mt.Qty ASC"
 $r5 = Run-Query $cs $q5
 $totalIssues += $r5.Rows.Count
 [void]$sections.Add("<h2>5. Negative total stock balance</h2>" + (Table-ToHtml $r5 "No negative total stock balances."))
