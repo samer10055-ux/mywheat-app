@@ -161,5 +161,31 @@ if ($totalIssues -gt 0) {
     } catch { }
 }
 
+# ===== Email alert (optional) =====
+# Reads credentials from a LOCAL config file that is never committed to git and
+# never leaves this machine. If the file does not exist, email sending is simply
+# skipped -- nothing breaks.
+$emailConfigFile = "C:\AmnAudit\email-config.ps1"
+if ($totalIssues -gt 0 -and (Test-Path $emailConfigFile)) {
+    try {
+        . $emailConfigFile   # defines $EmailFrom, $EmailTo, $EmailAppPassword
+        $mail = New-Object System.Net.Mail.MailMessage
+        $mail.From = $EmailFrom
+        $mail.To.Add($EmailTo)
+        $mail.Subject = "Al-Ameen Audit Alert - " + $totalIssues + " item(s) need review"
+        $mail.IsBodyHtml = $true
+        $mail.Body = $html
+        $smtp = New-Object System.Net.Mail.SmtpClient("smtp.gmail.com", 587)
+        $smtp.EnableSsl = $true
+        $smtp.Credentials = New-Object System.Net.NetworkCredential($EmailFrom, $EmailAppPassword)
+        $smtp.Send($mail)
+        Write-Host "Email alert sent to $EmailTo"
+    } catch {
+        Write-Host ("Email alert failed: " + $_.Exception.Message)
+    }
+} elseif ($totalIssues -gt 0) {
+    Write-Host "Email config not found at $emailConfigFile - skipping email alert."
+}
+
 Write-Host ("Audit complete. Issues found: " + $totalIssues)
 Write-Host ("Report: " + $reportFile)
