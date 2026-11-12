@@ -59,8 +59,10 @@ $totalIssues += $r1.Rows.Count
 $kwTransfer = -join @([char]0x0645,[char]0x0646,[char]0x0627,[char]0x0642,[char]0x0644,[char]0x0629)   # transfer (manaqala)
 $kwMove     = -join @([char]0x062A,[char]0x062D,[char]0x0648,[char]0x064A,[char]0x0644)                # movement (tahweel)
 $kwCount    = -join @([char]0x062C,[char]0x0631,[char]0x062F)                                          # inventory count (jard)
+$kwLoad     = -join @([char]0x062A,[char]0x062D,[char]0x0645,[char]0x064A,[char]0x0644)                # vehicle loading (tahmeel)
+$kwCollect  = -join @([char]0x062A,[char]0x062D,[char]0x0635,[char]0x064A,[char]0x0644)                # vehicle collection (tahseel)
 
-$q2 = "SELECT bu.Number, bu.Date, bt.Name AS BillType, u.LoginName AS CreatedBy, bu.Total FROM bu000 bu LEFT JOIN us000 u ON u.GUID = bu.CreateUserGUID LEFT JOIN bt000 bt ON bt.GUID = bu.TypeGUID WHERE bu.Total <= 0 AND EXISTS (SELECT 1 FROM bi000 bi WHERE bi.ParentGUID = bu.GUID) AND (bt.Name IS NULL OR (bt.Name NOT LIKE N'%" + $kwTransfer + "%' AND bt.Name NOT LIKE N'%" + $kwMove + "%' AND bt.Name NOT LIKE N'%" + $kwCount + "%')) ORDER BY bu.Date DESC"
+$q2 = "SELECT bu.Number, bu.Date, bt.Name AS BillType, u.LoginName AS CreatedBy, bu.Total FROM bu000 bu LEFT JOIN us000 u ON u.GUID = bu.CreateUserGUID LEFT JOIN bt000 bt ON bt.GUID = bu.TypeGUID WHERE bu.Total <= 0 AND EXISTS (SELECT 1 FROM bi000 bi WHERE bi.ParentGUID = bu.GUID) AND (bt.Name IS NULL OR (bt.Name NOT LIKE N'%" + $kwTransfer + "%' AND bt.Name NOT LIKE N'%" + $kwMove + "%' AND bt.Name NOT LIKE N'%" + $kwCount + "%' AND bt.Name NOT LIKE N'%" + $kwLoad + "%' AND bt.Name NOT LIKE N'%" + $kwCollect + "%')) ORDER BY bu.Date DESC"
 $r2 = Run-Query $cs $q2
 $totalIssues += $r2.Rows.Count
 [void]$sections.Add("<h2>2. Invoices with zero/negative total despite having items</h2>" + (Table-ToHtml $r2 "No invoices with abnormal totals."))
