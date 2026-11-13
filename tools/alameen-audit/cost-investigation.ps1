@@ -48,7 +48,7 @@ $report += "Finds products where recorded profit is suspiciously close to 100% o
 $report += ""
 
 # Step 1: find suspect products (last 12 months of real sales, BillType=1)
-$q1 = "SELECT mt.GUID, mt.Name, mt.AvgPrice, mt.LastPrice, mt.MaxPrice, CASE WHEN mt.CostGuid IS NULL THEN 'NULL' ELSE 'SET' END AS CostGuidStatus, SUM(bi.Qty) AS TotalQty, SUM(bi.Qty*bi.Price) AS Revenue, SUM(bi.Netprofit) AS Profit, SUM(bi.UnitCostPrice*bi.Qty) AS RecordedCostTotal, CASE WHEN SUM(bi.Qty*bi.Price) > 0 THEN SUM(bi.Netprofit)/SUM(bi.Qty*bi.Price) ELSE NULL END AS ProfitRatio FROM bi000 bi JOIN bu000 bu ON bi.ParentGUID=bu.GUID JOIN bt000 bt ON bt.GUID=bu.TypeGUID JOIN mt000 mt ON mt.GUID=bi.MatGUID WHERE bt.BillType=1 AND bu.Date >= DATEADD(month,-12,GETDATE()) GROUP BY mt.GUID, mt.Name, mt.AvgPrice, mt.LastPrice, mt.MaxPrice, mt.CostGuid HAVING SUM(bi.Qty*bi.Price) > 1000 AND (SUM(bi.Netprofit)/SUM(bi.Qty*bi.Price)) > 0.95 ORDER BY Revenue DESC"
+$q1 = "SELECT mt.GUID, mt.Name, mt.AvgPrice, mt.LastPrice, mt.MaxPrice, SUM(bi.Qty) AS TotalQty, SUM(bi.Qty*bi.Price) AS Revenue, SUM(bi.Netprofit) AS Profit, SUM(bi.UnitCostPrice*bi.Qty) AS RecordedCostTotal, CASE WHEN SUM(bi.Qty*bi.Price) > 0 THEN SUM(bi.Netprofit)/SUM(bi.Qty*bi.Price) ELSE NULL END AS ProfitRatio FROM bi000 bi JOIN bu000 bu ON bi.ParentGUID=bu.GUID JOIN bt000 bt ON bt.GUID=bu.TypeGUID JOIN mt000 mt ON mt.GUID=bi.MatGUID WHERE bt.BillType=1 AND bu.Date >= DATEADD(month,-12,GETDATE()) GROUP BY mt.GUID, mt.Name, mt.AvgPrice, mt.LastPrice, mt.MaxPrice HAVING SUM(bi.Qty*bi.Price) > 1000 AND (SUM(bi.Netprofit)/SUM(bi.Qty*bi.Price)) > 0.95 ORDER BY Revenue DESC"
 $suspects = Run-Query $q1 $null
 
 $report += "=== SUSPECT PRODUCTS (profit ratio > 95% of revenue -- cost likely missing) ==="
@@ -63,7 +63,7 @@ if ($suspects.Rows.Count -eq 0) {
         $name = $row.Name
         $report += "----------------------------------------------------------------"
         $report += ("PRODUCT: " + $name)
-        $report += ("AvgPrice=" + $row.AvgPrice + "  LastPrice=" + $row.LastPrice + "  MaxPrice=" + $row.MaxPrice + "  CostGuid=" + $row.CostGuidStatus)
+        $report += ("AvgPrice=" + $row.AvgPrice + "  LastPrice=" + $row.LastPrice + "  MaxPrice=" + $row.MaxPrice)
         $report += ""
 
         $report += "Recent SALES lines (last 5, any time):"
