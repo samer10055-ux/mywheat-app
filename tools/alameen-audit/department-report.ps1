@@ -61,7 +61,7 @@ $report += ""
 $report += "########## 2. SALES ##########"
 $report += ""
 $report += "=== 2a. Top 15 customers: first half vs second half of the last 12 months ==="
-$q = "SELECT cu.CustomerName, SUM(CASE WHEN bu.Date < DATEADD(month,-6,GETDATE()) THEN bu.Total ELSE 0 END) AS FirstHalf, SUM(CASE WHEN bu.Date >= DATEADD(month,-6,GETDATE()) THEN bu.Total ELSE 0 END) AS SecondHalf FROM bu000 bu JOIN bt000 bt ON bt.GUID=bu.TypeGUID JOIN cu000 cu ON cu.GUID=bu.CustGUID WHERE bt.BillType=1 AND bu.Date >= DATEADD(month,-12,GETDATE()) GROUP BY cu.CustomerName ORDER BY (FirstHalf+SecondHalf) DESC OFFSET 0 ROWS FETCH NEXT 15 ROWS ONLY"
+$q = "SELECT TOP 15 cu.CustomerName, SUM(CASE WHEN bu.Date < DATEADD(month,-6,GETDATE()) THEN bu.Total ELSE 0 END) AS FirstHalf, SUM(CASE WHEN bu.Date >= DATEADD(month,-6,GETDATE()) THEN bu.Total ELSE 0 END) AS SecondHalf FROM bu000 bu JOIN bt000 bt ON bt.GUID=bu.TypeGUID JOIN cu000 cu ON cu.GUID=bu.CustGUID WHERE bt.BillType=1 AND bu.Date >= DATEADD(month,-12,GETDATE()) GROUP BY cu.CustomerName ORDER BY SUM(bu.Total) DESC"
 $report += (Dump (Run-Query $q))
 $report += ""
 
