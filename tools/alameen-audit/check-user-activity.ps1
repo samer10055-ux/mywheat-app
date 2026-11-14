@@ -44,17 +44,17 @@ $report += "Matching users whose first/last name contains the search word."
 $report += ""
 
 $report += "=== Matching users ==="
-$q0 = "SELECT LoginName, FirstName, LastName, bAdmin, IsInactive FROM us000 WHERE FirstName LIKE N'%' + @kw + N'%' OR LastName LIKE N'%' + @kw + N'%'"
+$q0 = "SELECT LoginName, bAdmin, IsInactive FROM us000 WHERE LoginName LIKE N'%' + @kw + N'%'"
 $report += (Dump (Run-Query $q0 $searchWord))
 $report += ""
 
 $report += "=== Invoices he last-updated (last 3 days) ==="
-$q1 = "SELECT bu.Number, bt.Name AS BillType, bu.Date, bu.LastUpdateDate, bu.Total FROM bu000 bu LEFT JOIN bt000 bt ON bt.GUID=bu.TypeGUID JOIN us000 u ON u.GUID=bu.LastUpdateUserGUID WHERE (u.FirstName LIKE N'%' + @kw + N'%' OR u.LastName LIKE N'%' + @kw + N'%') AND bu.LastUpdateDate >= DATEADD(day,-3,GETDATE()) ORDER BY bu.LastUpdateDate DESC"
+$q1 = "SELECT bu.Number, bt.Name AS BillType, bu.Date, bu.LastUpdateDate, bu.Total FROM bu000 bu LEFT JOIN bt000 bt ON bt.GUID=bu.TypeGUID JOIN us000 u ON u.GUID=bu.LastUpdateUserGUID WHERE u.LoginName LIKE N'%' + @kw + N'%' AND bu.LastUpdateDate >= DATEADD(day,-3,GETDATE()) ORDER BY bu.LastUpdateDate DESC"
 $report += (Dump (Run-Query $q1 $searchWord))
 $report += ""
 
 $report += "=== Cash vouchers he created (last 3 days) ==="
-$q2 = "SELECT ce.Number, ce.Date, ce.Debit, ce.Credit, ce.Notes FROM ce000 ce JOIN us000 u ON u.GUID=ce.CreateUserGuid WHERE (u.FirstName LIKE N'%' + @kw + N'%' OR u.LastName LIKE N'%' + @kw + N'%') AND ce.Date >= DATEADD(day,-3,GETDATE()) ORDER BY ce.Date DESC"
+$q2 = "SELECT ce.Number, ce.Date, ce.Debit, ce.Credit, ce.Notes FROM ce000 ce JOIN us000 u ON u.GUID=ce.CreateUserGuid WHERE u.LoginName LIKE N'%' + @kw + N'%' AND ce.Date >= DATEADD(day,-3,GETDATE()) ORDER BY ce.Date DESC"
 $report += (Dump (Run-Query $q2 $searchWord))
 
 $report | Out-File -FilePath $outFile -Encoding UTF8
